@@ -1,48 +1,51 @@
-from evaluation.evaluator import XAIEvaluator
-from evaluation.stability_metrics import add_noise
+# run_experiments.py
 
-evaluator = XAIEvaluator()
+# -------- Imports (relative, required for -m execution) --------
+from .data_loader import load_pima
+from .data_preprocessing import preprocess_pima, preprocess_data
+from .model_training import train_random_forest
+from .explainers import generate_explanations
 
-# Take a small sample for stability test
+from .evaluation.evaluator import XAIEvaluator
+from .evaluation.stability_metrics import add_noise
+
+# -------- 1. Load & preprocess dataset --------
+df = load_pima()
+df = preprocess_pima(df)
+
+X_train, X_test, y_train, y_test = preprocess_data(df, target="Outcome")
+
+# -------- 2. Train model --------
+model, acc = train_random_forest(X_train, y_train, X_test, y_test)
+print("Model Accuracy:", acc)
+
+# -------- 3. Generate explanations (LIME only) --------
+feature_names = df.drop(columns=["Outcome"]).columns.tolist()
+
 X_sample = X_test[:5]
 
-# Original prediction
-original_pred = model.predict_proba(X_sample)[:, 1]
-
-# Original explanations
-original_explanations = generate_explanations(
+lime_explanations = generate_explanations(
     model, X_train, X_sample, feature_names
 )
 
-# Perturb input
-X_perturbed = add_noise(X_sample, noise_level=0.01)
+# -------- 4. Predictions (for fidelity / stability proxy) --------
+original_pred = model.predict_proba(X_sample)[:, 1]
 
-# Prediction after perturbation
+X_perturbed = add_noise(X_sample, noise_level=0.01)
 perturbed_pred = model.predict_proba(X_perturbed)[:, 1]
 
-# Perturbed explanations
-perturbed_explanations = generate_explanations(
-    model, X_train, X_perturbed, feature_names
-)
+# -------- 5. Evaluate explanations --------
+evaluator = XAIEvaluator()
 
-results = evaluator.evaluate_all(
-    shap_exp=original_explanations["shap"],
-    lime_exp=original_explanations["lime"],
-    shap_orig=original_explanations["shap"].values,
-    shap_pert=perturbed_explanations["shap"].values,
+results = evaluator.evaluate_lime_only(
+    lime_explanations=lime_explanations,
     original_pred=original_pred,
     perturbed_pred=perturbed_pred
 )
 
-print("\nXAI Evaluation Results")
-print("----------------------")
-print("Quality Metrics:", results["quality"])
-print("Stability Metrics:", results["stability"])
-print("Usability Metrics:", results["usability"])
+# -------- 6. Print results --------
+print("\n===== XAI Evaluation Results =====")
+print("Quality Metrics :", results["quality"])
+print("Stability Metrics :", results["stability"])
+print("Usability Metrics :", results["usability"])
 
-from visualization import plot_stability
-
-plot_stability({
-    "SHAP": results["stability"]["stability_score"],
-    "LIME": results["stability"]["stability_score"]  # later separate
-})

@@ -1,9 +1,22 @@
+import os
 import pandas as pd
 
+# Base directory of this file
+BASE_DIR = os.path.dirname(__file__)
+
 def load_pima():
-    df = pd.read_csv("datasets/pima_diabetes.csv")
+    """
+    Load PIMA Indians Diabetes dataset
+    """
+    path = os.path.join(BASE_DIR, "datasets", "pima_diabetes_data.csv")
+    df = pd.read_csv(path)
     return df
 
+
 def load_student():
-    df = pd.read_csv("datasets/student_performance.csv")
+    """
+    Load Student Performance dataset
+    """
+    path = os.path.join(BASE_DIR, "datasets", "student_data.csv")
+    df = pd.read_csv(path)
     return df
