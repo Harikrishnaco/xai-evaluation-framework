@@ -44,6 +44,7 @@ results = evaluator.evaluate_lime_only(
 )
 
 # -------- 6. Print results --------
+print("\nModel Accuracy:", acc)
 print("\n===== XAI Evaluation Results =====")
 print("Quality Metrics :", results["quality"])
 print("Stability Metrics :", results["stability"])
